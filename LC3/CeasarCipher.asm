@@ -1,0 +1,243 @@
+; Ric Rodriguez
+; rirrodri
+; 12L-02
+; Caesar Cipher
+
+	.ORIG	x3000 ; program start
+	LEA	R0, WELCOME ;load welcome msg into R0
+	AND R1,R1,#0 ;clear r1
+	PUTS	;output msg
+
+
+BEGIN	LEA	R0, QUESTION ;loop incase of invalid input
+	PUTS	;output msg
+	GETC	;get char input
+	OUT 	;echo char
+	ST R0, USERFLAG
+	BR CHARSIN
+
+ASCIIX	.FILL	#-88 ;load r2 with x incase of exit
+ASCIID	.FILL	#-68
+ASCIIE	.FILL #-69
+DE	.STRINGZ	"\nENTERING DECRYPTION\n"
+USERFLAG	.FILL	#0
+EN	.STRINGZ	"\nWhat is the cipher?(1-25)\n>"
+ERROR	.STRINGZ	"\nInvalid argument. Did you use capital letters?\n"
+WELCOME	.STRINGZ	"Hello, welcome to my Caesar Cipher program\n"
+QUESTION	.STRINGZ	"Do you want to (E)ncrypt or (D)ecrypt or e(X)it?\n>"
+
+USERIN	.STRINGZ	"\nWhat is the string?(up to 200 characters)\n>"
+
+CHARSIN	LEA R0, EN
+	PUTS
+NEXTCHAR	GETC	;get cipher input
+	OUT
+	AND R4,R4,0		;reset r4
+	LD R2, ASCIIENTER	;check for return
+	ADD R2,R2,R0
+	BRz STRINGIN
+	LD R2,ASCIIOFF	;convert to bin
+	ADD R4,R2,R0
+	LD R2, NEG9 	;multiply by 10
+	AND R3,R3,0
+	ADD R3,R3,R4
+MULTIPLY	LD R1, ONE
+	ADD R4,R4,R3
+	ADD R2,R2,R1
+	BRn MULTIPLY
+	ADD R2,R2,#-1
+	NOT R2,R2
+	ADD R4,R4,R2
+	BRp NEXTCHAR
+
+
+ASCIIOFF	.FILL #-48
+ASCIIENTER .FILL #-10
+NEG9 .FILL #-9
+ONE .FILL #1
+CAPOFF	.FILL #-26
+ASCIIIE	.FILL #-69
+START .FILL 0x3000
+
+STRINGIN	ST R4,	USERCIPHER
+	LEA R0, USERIN ;get string input
+	PUTS
+	AND R2,R2,0
+
+USERCIPHER	.FILL #0
+
+CHARIN	GETC
+	OUT
+	AND R1,R1,0
+	LD R2, ASCIIENTER
+	ADD R0,R0,R2
+	BRz OUTPRINT
+
+	LD R1,ASCIIE2
+
+	ADD R2,R2,R1
+	BRz ENCRYPTYES
+	AND R6,R6,0
+	JSR STORE
+	JSR DECRYPTER
+	ADD R6,R6,1
+	JSR STORE
+	BR DECRYPTYES
+
+ASCIIE2 .FILL #-69
+BYE	.STRINGZ	"\nGoodbye!"
+
+ENCRYPTYES	AND R6,R6,0 ;if input encrypt
+	ADD R6,R6,#1 ; start at array[1]
+	JSR STORE ;store string
+	AND R6,R6,0
+	JSR ENCRYPTER ;encrypt string
+	JSR STORE ;store string in array[0]
+DECRYPTYES	ADD R3, R3,1
+	BR CHARIN ;loop until return
+
+OUTPRINT JSR PRINTARR ;get chars for output
+	AND R0,R0,0 ;reset registers
+	AND R6,R6,0
+	AND R2,R2,0
+	LD R4, SUBARRAY ;set r3 to itor
+RESETROW0 JSR STORE ;store encrypted in array[0]
+	ADD R5,R5,1 ;increment memory address by 1
+	ADD R4,R4,#-1 ; array size minus 1
+	BRp RESETROW0 ;[loop until arrayLen =0]
+	ADD R6,R6,1 ;same for array[1]
+	AND R5,R5,0 
+	LD R4,SUBARRAY
+RESETROW1	JSR STORE ;same as above, for decrypted string
+	ADD R5,R5,1
+	ADD R4,R4,#-1
+	BRp RESETROW1
+	LD R0,BYE
+	PUTS
+	HALT
+
+
+ENCRYPTER LD	R1, ASCIICAPA ;determine position of char
+	ADD R1,R1,R0
+	BRn NOMOD
+
+	LD R1, ASCIICAPM ; check if greater than M
+	ADD R1,R1,R0
+	BRnz LOADUP
+
+	LD R1, ASCIILOWA
+	ADD R1,R1,R0
+	BRn NOMOD
+
+	LD R1, ASCIILOWM
+	ADD R1,R1,R0
+	BRp NOMOD
+
+	ADD R0,R0,R4
+
+	LD R1,ASCIILOWM
+	ADD R1,R1,R0
+	BRp DCAPS
+	BR NOMOD
+LOADUP ADD R0,R0,R4
+	LD R1,ASCIICAPM
+	ADD R1,R1,R0
+	BRp DCAPS
+	BR NOMOD
+
+DECRYPTER LD	R1, ASCIICAPA
+	ADD R1,R1,R0
+	BRn NOMOD
+
+	LD R1, ASCIICAPZ
+	ADD R1,R1,R0
+	BRnz LOWER
+
+	LD R1, ASCIILOWA
+	ADD R1,R1,R0
+	BRn NOMOD
+
+	LD R1, ASCIILOWZ
+	ADD R1,R1,R0
+	BRp NOMOD
+
+	LD R4, USERCIPHER
+	NOT R4,R4
+	ADD R4,R4,#1
+	ADD R0,R0,R4
+
+	LD R1,ASCIILOWA
+	ADD R1,R1,R0
+	BRp DCAPS
+	BR NOMOD
+LOWER LD R4, USERCIPHER
+	NOT R4,R4
+	ADD R4,R4,#1
+	ADD R0,R0,R4
+	LD R1,ASCIICAPA
+	ADD R1,R1,R0
+	BRn DCAPS
+	BR NOMOD
+DCAPS	LD R1,CAPOFF
+	NOT R1,R1
+	ADD R1,R1,#1
+	ADD R0,R0,R1
+
+NOMOD RET
+
+PRINTARR
+	LEA R0,STRE
+	PUTS
+	AND R6,R6,#0
+	AND R2,R2,#0
+	LD R1,SUBARRAY
+PRINTEN	JSR LOAD			; print encrypted
+	OUT
+	ADD R2,R2,#1
+	ADD R1,R1,#-1
+	BRp PRINTEN
+	LEA R0,STRD
+	PUTS
+	ADD R6,R6,#1
+	AND R2,R2,#0
+	LD R1,SUBARRAY
+PRINTDE	JSR LOAD			; print decrypted
+	OUT
+	ADD R2,R2,#1
+	ADD R1,R1,#-1
+	BRp PRINTDE
+	RET
+
+STRE	.STRINGZ "<Encrypted>"
+STRD	.STRINGZ "\n<Decrypted>"
+ASCIICAPA	.FILL	#-65
+ASCIILOWA	.FILL	#-97
+ASCIICAPM	.FILL	#-77
+ASCIILOWM	.FILL	#-109
+ASCIICAPZ	.FILL	#-90
+ASCIILOWZ	.FILL	#-122
+TOTALARRAY	.FILL	#400
+
+STORE LEA R3, ARRAY
+	ADD R6,R6,0
+	BRz ROW0
+	LEA R5, SUBARRAY
+	LDR R5,R5,#0
+	ADD R3,R3,R5
+ROW0 ADD R3, R3, R2
+	STR R0, R3, #0
+	RET
+
+LOAD LEA R3, ARRAY
+	ADD R6,R6,0
+	BRz LROW0
+	LEA R5, SUBARRAY
+	LDR R5,R5,#0
+	ADD R3,R3,R5
+LROW0 ADD R3, R3, R2
+	LDR R0, R3, #0
+	RET
+
+SUBARRAY .FILL	#200
+ARRAY	.BLKW	400
+	.END
